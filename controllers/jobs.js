@@ -1,64 +1,57 @@
+const User = require('../models/User');
 const Job = require('../models/Job');
-const {StatusCode} = require('http-status-codes');
-const {BadRequestError,NotFoundError} = require('../errors');
+const {StatusCodes} = require('http-status-codes')
+const {BadRequestError,NotFoundError} = require('../errors')
 
-const getAllJobs = async (req,res)=>{
-  const {userId} = req.user;
-  const job = await Job.find({createdBy:userId}).sort('createdAt')
-  res.status(200).json(job);
+const getAllJob = async (req,res)=>{
+  const user = req.user;
+  const jobs = await Job.find({createdBy:user.userId});
+  res.status(StatusCodes.OK).json({jobs})
 }
 
-const getJob = async (req,res)=>{
-  const {user:{userId},params:{id:jobId}} = req;
-  const job = await Job.findOne({_id:jobId,createdBy:userId});
-  //this for make sure the job is exists
-  if(!job){
-    throw new NotFoundError('there is no job match this id')
-  }
-  res.status(200).json({msg:'work!',job});
+const getSingJob = async (req,res)=>{
+  const {userId} = req.user;
+  const {id:jobId} = req.params;
+
+  const singleJob = await Job.findOne({_id:jobId,createdBy:userId})
+  if(!singleJob) throw new NotFoundError(`There is no job for ID: ${jobId}`)
+  res.status(StatusCodes.OK).json({job:singleJob});
 }
 
 const updateJob = async (req,res)=>{
-  const {
-    user:{userId},
-    params:{id:jobId},
-    body:{company,position}
-  } = req;
-  if(company.trim() ==='' || position.trim() ===''){
-    throw new BadRequestError('company and position must provided')
-  }
-  const job = await Job.findOneAndUpdate({_id:jobId,createdBy:userId},req.body,{new:true , runValidators:true});
-  //this for make sure the job is exists
-  if(!job){
-    throw new NotFoundError('there is no job match this id')
-  }
-  res.status(200).json({msg:'work!',job});
+  const {company, name,status} = req.body;
+  const {userId} = req.user;
+  const {id} = req.params;
+  // validate values
+  if(!company || !name || !status) throw new BadRequestError('please provide all values');
+  // update task
+  const newJob = await Job.findOneAndUpdate({createdBy:userId,_id:id},{company,name,status},{new:true,runValidators:true});
+  // validate task
+  if(!newJob) throw new BadRequestError(`un valid id:${id}`)
+  
+  //send response
+  res.status(StatusCodes.OK).json({job:newJob})
+  
 }
 
-const deleteJob = async (req,res)=>{  
-  const {
-    user:{userId},
-    params:{id:jobId}
-  } = req;
+const deleteJob = async (req,res)=>{
+  const {userId} = req.user;
+  const {id:jobId} = req.params;
 
   const job = await Job.findOneAndDelete({_id:jobId,createdBy:userId});
-  //this for make sure the job is exists
-  if(!job){
-    throw new NotFoundError('there is no job match this id')
-  }
-  res.status(200).json({msg:'work!',job});
+  res.status(StatusCodes.OK).json({job})
 }
-
 const createJob = async (req,res)=>{
+  const {userId} = req.user;
   const {company,position} = req.body;
-  const {userId} = req.user
-  const job = await Job.create({company,position:position,createdBy:userId});
-  res.status(201).json(job);
+  const newJob = await Job.create({company,position,createdBy:userId});
+
+  res.status(StatusCodes.CREATED).json({msg:'work',job:newJob})
 }
 
-module.exports = {
-  getAllJobs,
-  getJob,
+module.exports ={
+  getAllJob,
+  getSingJob,
   updateJob,
   deleteJob,
   createJob

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const connectDB = (url) => {
+const connectDB = async (url) => {
   return mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useCreateIndex: true,
